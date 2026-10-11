@@ -2,22 +2,38 @@ package VendingMachine;
 
 import java.util.HashMap;
 import java.util.Map;
+
 import VendingMachine.DomainModels.Inventory;
 
 // Single-customer version: concurrent access is not supported yet.
 public class VendingMachine {
     private long insertedMoney;
-    private final Map<Integer, Inventory> inventory;
     private Inventory selectedItem;
+    private Purchase purchaseSession;
+    private long nextPurchaseId;
+
+    public Purchase startPurchase() {
+        if (purchaseSession != null) {
+            throw new IllegalStateException("Machine is busy");
+        }
+
+        this.purchaseSession = new Purchase(nextPurchaseId++);
+        return this.purchaseSession;
+    }
 
     public VendingMachine(Map<Integer, Inventory> inventory) {
+
         if (inventory == null || inventory.containsValue(null)) {
             throw new IllegalArgumentException("Inventory and its entries must not be null");
         }
         this.inventory = new HashMap<>(inventory);
     }
 
-    public void selectProduct(int productId) {
+    public void selectProduct(long purchaseId, int productId) {
+
+        requireActivePurchase(purchaseId));
+
+
         if (selectedItem != null) {
             throw new IllegalStateException("A product is already selected");
         }
@@ -31,7 +47,10 @@ public class VendingMachine {
         selectedItem = item;
     }
 
-    public void insertMoney(long amount) {
+    public void insertMoney(long purchaseId, long amount) {
+
+        requireActivePurchase(purchaseId));
+
         requireSelection();
         if (amount <= 0 || amount > Long.MAX_VALUE - insertedMoney) {
             throw new IllegalArgumentException("Amount must be positive and fit in the balance");
@@ -39,7 +58,10 @@ public class VendingMachine {
         insertedMoney += amount;
     }
 
-    public long dispense() {
+    public long dispense(long purchaseId) {
+
+        requireActivePurchase(purchaseId));
+
         requireSelection();
         if (selectedItem.getInStock() <= 0) {
             throw new IllegalStateException("Product is out of stock");
@@ -53,7 +75,10 @@ public class VendingMachine {
         return change;
     }
 
-    public long cancel() {
+    public long cancel(long purchaseId) {
+
+        requireActivePurchase(purchaseId));
+
         long refund = insertedMoney;
         resetPurchase();
         return refund;
@@ -68,5 +93,15 @@ public class VendingMachine {
     private void resetPurchase() {
         insertedMoney = 0;
         selectedItem = null;
+        purchaseSession = null;
     }
+
+    private void requireActivePurchase(long purchaseId) {
+        if (purchaseSession == null
+                || purchaseSession.getId() != purchaseId) {
+            throw new IllegalStateException(
+                    "Invalid or finished purchase");
+        }
+    }
+
 }

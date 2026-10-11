@@ -3,6 +3,7 @@ package VendingMachine;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Scanner;
+
 import VendingMachine.DomainModels.Inventory;
 
 public class Main {
@@ -11,6 +12,7 @@ public class Main {
         inventory.put(1, new Inventory(1, 3, "CHIPS", 1, 30));
         inventory.put(2, new Inventory(2, 2, "JUICE", 2, 40));
         VendingMachine machine = new VendingMachine(inventory);
+        Purchase purchase = machine.startPurchase(); //created a session basically
 
         try (Scanner scanner = new Scanner(System.in)) {
             boolean running = true;
@@ -27,7 +29,7 @@ public class Main {
                         """);
                 System.out.print("Enter choice: ");
                 if (!scanner.hasNextLine()) {
-                    System.out.println("Refund: Rs " + machine.cancel());
+                    System.out.println("Refund: Rs " + machine.cancel(purchase.getId()));
                     break;
                 }
                 try {
@@ -36,20 +38,27 @@ public class Main {
                         case 1 -> {
                             System.out.print("Enter product ID: ");
                             if (!scanner.hasNextLine()) continue;
-                            machine.selectProduct(Integer.parseInt(scanner.nextLine()));
+                            machine.selectProduct(purchase.getId(), Integer.parseInt(scanner.nextLine()));
                             System.out.println("Product selected");
                         }
                         case 2 -> {
                             System.out.print("Enter amount in rupees: ");
                             if (!scanner.hasNextLine()) continue;
-                            machine.insertMoney(Long.parseLong(scanner.nextLine()));
+                            machine.insertMoney(purchase.getId(), Long.parseLong(scanner.nextLine()));
                             System.out.println("Payment accepted");
                         }
-                        case 3 -> System.out.println(
-                                "Product dispensed. Change: Rs " + machine.dispense());
-                        case 4 -> System.out.println("Refund: Rs " + machine.cancel());
+                        case 3 -> {
+                            long change = machine.dispense(purchase.getId());
+                            System.out.println("Product dispensed. Change: Rs " + change);
+                            purchase = machine.startPurchase();
+                        }
+                        case 4 -> {
+                            long refund = machine.cancel(purchase.getId());
+                            System.out.println("Refund: Rs " + refund);
+                            purchase = machine.startPurchase();
+                        }
                         case 5 -> {
-                            System.out.println("Refund: Rs " + machine.cancel());
+                            System.out.println("Refund: Rs " + machine.cancel(purchase.getId()));
                             running = false;
                         }
                         default -> System.out.println("Choose between 1 and 5");
