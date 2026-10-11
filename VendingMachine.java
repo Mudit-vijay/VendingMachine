@@ -5,14 +5,15 @@ import java.util.Map;
 
 import VendingMachine.DomainModels.Inventory;
 
-// Single-customer version: concurrent access is not supported yet.
+// One active purchase; operations synchronize on this machine instance.
 public class VendingMachine {
     private long insertedMoney;
+    private final Map<Integer, Inventory> inventory;
     private Inventory selectedItem;
     private Purchase purchaseSession;
     private long nextPurchaseId;
 
-    public Purchase startPurchase() {
+    public synchronized Purchase startPurchase() {
         if (purchaseSession != null) {
             throw new IllegalStateException("Machine is busy");
         }
@@ -29,9 +30,9 @@ public class VendingMachine {
         this.inventory = new HashMap<>(inventory);
     }
 
-    public void selectProduct(long purchaseId, int productId) {
+    public synchronized void selectProduct(long purchaseId, int productId) {
 
-        requireActivePurchase(purchaseId));
+        requireActivePurchase(purchaseId);
 
 
         if (selectedItem != null) {
@@ -47,9 +48,9 @@ public class VendingMachine {
         selectedItem = item;
     }
 
-    public void insertMoney(long purchaseId, long amount) {
+    public synchronized void insertMoney(long purchaseId, long amount) {
 
-        requireActivePurchase(purchaseId));
+        requireActivePurchase(purchaseId);
 
         requireSelection();
         if (amount <= 0 || amount > Long.MAX_VALUE - insertedMoney) {
@@ -58,9 +59,9 @@ public class VendingMachine {
         insertedMoney += amount;
     }
 
-    public long dispense(long purchaseId) {
+    public synchronized long dispense(long purchaseId) {
 
-        requireActivePurchase(purchaseId));
+        requireActivePurchase(purchaseId);
 
         requireSelection();
         if (selectedItem.getInStock() <= 0) {
@@ -75,9 +76,9 @@ public class VendingMachine {
         return change;
     }
 
-    public long cancel(long purchaseId) {
+    public synchronized long cancel(long purchaseId) {
 
-        requireActivePurchase(purchaseId));
+        requireActivePurchase(purchaseId);
 
         long refund = insertedMoney;
         resetPurchase();
